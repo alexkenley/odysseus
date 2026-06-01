@@ -13,6 +13,9 @@ def test_calendar_imperative_variants_promote_to_agent():
     assert message_needs_tools("Okay delete that doctor appointment from the calendar")
     assert message_needs_tools("have another go at adding a test entry to the calendar")
     assert message_needs_tools(
+        "Okay so you should be able to create that calendar event for tomorrow at 1:30 p.m. right for me to go to the hardware store"
+    )
+    assert message_needs_tools(
         "make it an appointment at 12pm for me to visit the doctor it's tomorrow the 2nd of June 2026"
     )
 

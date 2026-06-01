@@ -12,6 +12,11 @@ from typing import Iterable, Pattern
 
 
 _ACTION_QUESTION = r"\b(?:can|could|would|will)\s+you\s+"
+_ACTION_FOLLOWUP = (
+    r"\b(?:you\s+should\s+be\s+able\s+to|"
+    r"(?:can|could|would|will|should)\s+you|"
+    r"you\s+(?:can|could|would|will|should|need\s+to|have\s+to))\s+"
+)
 _PLEASE = r"^\s*(?:(?:please|ok(?:ay)?|alright|right|sure|cool|great|thanks)[\s,.!-]+)*"
 
 _CALENDAR_ACTION = (
@@ -36,6 +41,7 @@ _TOOL_INTENT_PATTERNS: tuple[Pattern[str], ...] = tuple(
         # Calendar/event creation. Covers "Can you add an entry to my
         # calendar?" and imperatives like "add lunch to my calendar".
         rf"{_ACTION_QUESTION}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
+        rf"{_ACTION_FOLLOWUP}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
         rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
         rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b",
         rf"{_PLEASE}{_CALENDAR_ACTION}\s+(?:it\s+)?(?:a\s+|an\s+)?(?:calendar\s+)?(?:event|meeting|appointment|entry|item|call)\b",
