@@ -582,6 +582,15 @@ set_task_scheduler(task_scheduler)
 from routes.task_routes import setup_task_routes
 app.include_router(setup_task_routes(task_scheduler))
 
+from src.remote_control import RemoteControlManager
+remote_control_manager = RemoteControlManager(
+    session_manager=session_manager,
+    task_scheduler=task_scheduler,
+    auth_manager=auth_manager,
+    api_key_manager=api_key_manager,
+    app=app,
+)
+
 from routes.assistant_routes import setup_assistant_routes
 app.include_router(setup_assistant_routes(task_scheduler))
 
@@ -642,7 +651,11 @@ app.include_router(setup_webhook_routes(webhook_manager, auth_manager, session_m
 from routes.api_token_routes import setup_api_token_routes
 app.include_router(setup_api_token_routes())
 
-logger.info("Webhook & API token routes initialized")
+# Telegram remote control adapter
+from routes.remote_control_routes import setup_remote_control_routes
+app.include_router(setup_remote_control_routes(remote_control_manager, auth_manager))
+
+logger.info("Webhook, API token, and remote control routes initialized")
 
 # Notes (Google Keep-style notes/todos)
 from routes.note_routes import setup_note_routes
@@ -783,6 +796,7 @@ async def startup_event():
     app.state._startup_tasks = _startup_tasks
     if upload_cleanup_func:
         upload_cleanup_task = asyncio.create_task(upload_cleanup_func())
+    _startup_tasks.append(asyncio.create_task(remote_control_manager.start()))
     # Always-on monitor that auto-continues the agent when a background bash
     # job (#!bg) finishes — re-invokes the turn with the job output.
     try:
@@ -1000,6 +1014,11 @@ async def shutdown_event():
         await webhook_manager.close()
     except Exception as e:
         logger.warning(f"Webhook manager shutdown error: {e}")
+    # Close remote-control adapters
+    try:
+        await remote_control_manager.close()
+    except Exception as e:
+        logger.warning(f"Remote control shutdown error: {e}")
     # Disconnect all MCP servers
     try:
         await mcp_manager.disconnect_all()

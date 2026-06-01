@@ -14,8 +14,10 @@ from typing import Iterable, Pattern
 _ACTION_QUESTION = r"\b(?:can|could|would|will)\s+you\s+"
 _PLEASE = r"^\s*(?:please\s+)?"
 
+_CALENDAR_WORD = r"(?:calendar|calander)"
 _CALENDAR_ACTION = r"(?:add|create|schedule|book|put|set\s+up|make)"
-_CALENDAR_THING = r"(?:calendar|calendar\s+(?:entry|item)|event|meeting|appointment|entry|call)"
+_CALENDAR_THING = rf"(?:{_CALENDAR_WORD}|{_CALENDAR_WORD}\s+(?:entry|item)|event|meeting|appointment|entry|call)"
+_CALENDAR_READ_THING = rf"(?:{_CALENDAR_WORD}(?:\s+(?:entries|entry|items?|events?))?|events?|meetings?|appointments?|entries|schedule|agenda)"
 
 _PANEL = (
     r"(?:calendar|notes?|inbox|email|mail|documents?|docs|library|gallery|"
@@ -28,9 +30,17 @@ _TOOL_INTENT_PATTERNS: tuple[Pattern[str], ...] = tuple(
         # Calendar/event creation. Covers "Can you add an entry to my
         # calendar?" and imperatives like "add lunch to my calendar".
         rf"{_ACTION_QUESTION}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
-        rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b",
+        rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?{_CALENDAR_WORD}\b",
         rf"{_PLEASE}{_CALENDAR_ACTION}\s+(?:a\s+|an\s+)?(?:calendar\s+)?(?:event|meeting|appointment|entry|item|call)\b",
         r"\bput\s+.+\bon\s+(?:my\s+)?calendar\b",
+
+        # Calendar read/list requests. Remote-control messages enter through
+        # the same chat front door, so these need the usual tool promotion too.
+        rf"{_PLEASE}(?:what(?:'s|\s+is)?|show|list|check|view|tell\s+me)\b.{{0,120}}\b(?:on|in|for|from)\s+(?:my\s+|the\s+)?{_CALENDAR_READ_THING}\b",
+        rf"{_PLEASE}(?:show|list|check|view|tell\s+me)\b.{{0,80}}\b(?:my\s+|the\s+){_CALENDAR_READ_THING}\b",
+        rf"{_PLEASE}(?:what|which)\b.{{0,80}}\b{_CALENDAR_READ_THING}\b.{{0,80}}\b(?:do\s+i\s+have|have\s+i\s+got|are\s+there)\b",
+        rf"{_PLEASE}(?:do\s+i\s+have|have\s+i\s+got|are\s+there|any)\b.{{0,80}}\b{_CALENDAR_READ_THING}\b",
+        rf"{_PLEASE}what(?:'s|\s+is)?\s+(?:my\s+|the\s+)(?:schedule|agenda)\b",
 
         # Notes, todos, checklists, and reminders.
         r"\bremind\s+me\b",
