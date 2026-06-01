@@ -12,10 +12,18 @@ from typing import Iterable, Pattern
 
 
 _ACTION_QUESTION = r"\b(?:can|could|would|will)\s+you\s+"
-_PLEASE = r"^\s*(?:please\s+)?"
+_PLEASE = r"^\s*(?:(?:please|ok(?:ay)?|alright|right|sure|cool|great|thanks)[\s,.!-]+)*"
 
-_CALENDAR_ACTION = r"(?:add|create|schedule|book|put|set\s+up|make)"
+_CALENDAR_ACTION = (
+    r"(?:add|adding|create|creating|recreate|recreating|schedule|scheduling|"
+    r"reschedule|rescheduling|book|booking|put|set\s+up|make|making|"
+    r"delete|deleting|remove|removing|cancel|cancelling|canceling)"
+)
 _CALENDAR_THING = r"(?:calendar|calendar\s+(?:entry|item)|event|meeting|appointment|entry|call)"
+_EXPLANATORY_PREFIX = re.compile(
+    r"^\s*(?:how\s+(?:do|can)\s+i|can\s+you\s+explain|what\s+about|tell\s+me\s+how|show\s+me\s+how)\b",
+    re.I,
+)
 
 _PANEL = (
     r"(?:calendar|notes?|inbox|email|mail|documents?|docs|library|gallery|"
@@ -28,8 +36,10 @@ _TOOL_INTENT_PATTERNS: tuple[Pattern[str], ...] = tuple(
         # Calendar/event creation. Covers "Can you add an entry to my
         # calendar?" and imperatives like "add lunch to my calendar".
         rf"{_ACTION_QUESTION}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
+        rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
         rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b",
-        rf"{_PLEASE}{_CALENDAR_ACTION}\s+(?:a\s+|an\s+)?(?:calendar\s+)?(?:event|meeting|appointment|entry|item|call)\b",
+        rf"{_PLEASE}{_CALENDAR_ACTION}\s+(?:it\s+)?(?:a\s+|an\s+)?(?:calendar\s+)?(?:event|meeting|appointment|entry|item|call)\b",
+        rf"\b{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b",
         r"\bput\s+.+\bon\s+(?:my\s+)?calendar\b",
 
         # Notes, todos, checklists, and reminders.
@@ -77,5 +87,7 @@ _TOOL_INTENT_PATTERNS: tuple[Pattern[str], ...] = tuple(
 def message_needs_tools(text: str, patterns: Iterable[Pattern[str]] = _TOOL_INTENT_PATTERNS) -> bool:
     """Return True when a plain chat message should be promoted to agent mode."""
     if not text:
+        return False
+    if _EXPLANATORY_PREFIX.search(text):
         return False
     return any(pattern.search(text) for pattern in patterns)
