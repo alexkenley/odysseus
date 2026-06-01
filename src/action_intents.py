@@ -34,7 +34,9 @@ _CALENDAR_ACTION = (
     r"reschedule|rescheduling|book|booking|put|set\s+up|make|making|"
     r"delete|deleting|remove|removing|cancel|cancelling|canceling)"
 )
-_CALENDAR_THING = r"(?:calendar|calendar\s+(?:entry|item)|event|meeting|appointment|entry|call)"
+_CALENDAR_WORD = r"(?:calendar|calander)"
+_CALENDAR_THING = rf"(?:{_CALENDAR_WORD}|{_CALENDAR_WORD}\s+(?:entry|item)|event|meeting|appointment|entry|call)"
+_CALENDAR_READ_THING = rf"(?:{_CALENDAR_WORD}(?:\s+(?:entries|entry|items?|events?))?|events?|meetings?|appointments?|entries|schedule|agenda)"
 _EXPLANATORY_PREFIX = re.compile(
     r"^\s*(?:how\s+(?:do|can)\s+i|can\s+you\s+explain|what\s+about|tell\s+me\s+how|show\s+me\s+how)\b",
     re.I,
@@ -54,10 +56,18 @@ _ROUTING_PATTERNS: tuple[tuple[str, str, Pattern[str]], ...] = tuple(
         ("calendar", "assistant calendar action request", rf"{_ACTION_QUESTION}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b"),
         ("calendar", "calendar follow-up action request", rf"{_ACTION_FOLLOWUP}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b"),
         ("calendar", "calendar imperative action request", rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b"),
-        ("calendar", "calendar target action request", rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b"),
+        ("calendar", "calendar target action request", rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?{_CALENDAR_WORD}\b"),
         ("calendar", "calendar item action request", rf"{_PLEASE}{_CALENDAR_ACTION}\s+(?:it\s+)?(?:a\s+|an\s+)?(?:calendar\s+)?(?:event|meeting|appointment|entry|item|call)\b"),
-        ("calendar", "calendar target action request", rf"\b{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b"),
+        ("calendar", "calendar target action request", rf"\b{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?{_CALENDAR_WORD}\b"),
         ("calendar", "put item on calendar request", r"\bput\s+.+\bon\s+(?:my\s+)?calendar\b"),
+
+        # Calendar read/list requests. Remote-control messages enter through
+        # the same chat front door, so these need the usual tool promotion too.
+        ("calendar", "calendar read/list request", rf"{_PLEASE}(?:what(?:'s|\s+is)?|show|list|check|view|tell\s+me)\b.{{0,120}}\b(?:on|in|for|from)\s+(?:my\s+|the\s+)?{_CALENDAR_READ_THING}\b"),
+        ("calendar", "calendar read/list request", rf"{_PLEASE}(?:show|list|check|view|tell\s+me)\b.{{0,80}}\b(?:my\s+|the\s+){_CALENDAR_READ_THING}\b"),
+        ("calendar", "calendar read/list request", rf"{_PLEASE}(?:what|which)\b.{{0,80}}\b{_CALENDAR_READ_THING}\b.{{0,80}}\b(?:do\s+i\s+have|have\s+i\s+got|are\s+there)\b"),
+        ("calendar", "calendar read/list request", rf"{_PLEASE}(?:do\s+i\s+have|have\s+i\s+got|are\s+there|any)\b.{{0,80}}\b{_CALENDAR_READ_THING}\b"),
+        ("calendar", "calendar agenda request", rf"{_PLEASE}what(?:'s|\s+is)?\s+(?:my\s+|the\s+)(?:schedule|agenda)\b"),
 
         # Notes, todos, checklists, and reminders.
         ("notes", "reminder request", r"\bremind\s+me\b"),

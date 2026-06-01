@@ -3119,6 +3119,7 @@ const INTG_TYPES = {
   mcp:     { label: 'MCP',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' },
   codex:   { label: 'Codex',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 10.696.453a6.023 6.023 0 0 0-5.75 4.172 6.061 6.061 0 0 0-3.946 2.945 6.024 6.024 0 0 0 .742 7.099 5.98 5.98 0 0 0 .516 4.911 6.046 6.046 0 0 0 6.51 2.9A5.996 5.996 0 0 0 13.26 23.547a6.023 6.023 0 0 0 5.75-4.172 6.061 6.061 0 0 0 3.946-2.945 6.024 6.024 0 0 0-.674-6.609zM13.26 21.047a4.508 4.508 0 0 1-2.886-1.041l.143-.082 4.793-2.769a.777.777 0 0 0 .391-.676V10.34l2.026 1.17a.072.072 0 0 1 .039.061v5.596a4.532 4.532 0 0 1-4.506 4.48zM3.968 17.64a4.473 4.473 0 0 1-.537-3.018l.143.086 4.793 2.769a.79.79 0 0 0 .782 0l5.852-3.379v2.34a.072.072 0 0 1-.029.062l-4.845 2.796a4.532 4.532 0 0 1-6.159-1.656zM2.804 7.922a4.49 4.49 0 0 1 2.348-1.973V11.6a.778.778 0 0 0 .391.676l5.852 3.378-2.026 1.17a.072.072 0 0 1-.068 0L4.456 14.03a4.532 4.532 0 0 1-1.652-6.108zm16.423 3.823L13.375 8.367l2.026-1.17a.072.072 0 0 1 .068 0l4.845 2.796a4.525 4.525 0 0 1-.7 8.08V12.42a.778.778 0 0 0-.387-.676zm2.015-3.025l-.143-.086-4.793-2.769a.79.79 0 0 0-.782 0L9.672 9.243V6.903a.072.072 0 0 1 .029-.062l4.845-2.796a4.525 4.525 0 0 1 6.696 4.675zM8.598 12.66L6.57 11.49a.072.072 0 0 1-.039-.061V5.833a4.525 4.525 0 0 1 7.413-3.48l-.143.082-4.793 2.769a.777.777 0 0 0-.391.676l-.019 6.78zm1.1-2.379l2.607-1.505 2.607 1.505v3.01l-2.607 1.505-2.607-1.505z"/></svg>' },
   claude:  { label: 'Claude',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>' },
+  remote:  { label: 'Telegram', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/><path d="M8 6h8"/></svg>' },
   vault:   { label: 'Vault',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' },
 };
 
@@ -3197,13 +3198,14 @@ async function initUnifiedIntegrations() {
   }
 
   async function fetchAll() {
-    const [apiRes, calRes, cardRes, contactsRes, emailAccountsRes, mcpRes, vaultRes, tokenRes] = await Promise.all([
+    const [apiRes, calRes, cardRes, contactsRes, emailAccountsRes, mcpRes, remoteRes, vaultRes, tokenRes] = await Promise.all([
       fetch('/api/auth/integrations', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : { integrations: [] }).catch(() => ({ integrations: [] })),
       fetch('/api/calendar/config', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
       fetch('/api/contacts/config', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
       fetch('/api/contacts/list', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : { contacts: [], count: 0 }).catch(() => ({ contacts: [], count: 0 })),
       fetch('/api/email/accounts', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : { accounts: [] }).catch(() => ({ accounts: [] })),
       fetch('/api/mcp/servers', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch('/api/remote-control', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : { providers: {} }).catch(() => ({ providers: {} })),
       fetch('/api/vault/config', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
       fetch('/api/tokens', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []).catch(() => []),
     ]);
@@ -3249,6 +3251,22 @@ async function initUnifiedIntegrations() {
     for (const srv of mcpList) {
       const statusText = srv.needs_oauth ? 'needs auth' : srv.status === 'connected' ? `${srv.enabled_tool_count}/${srv.tool_count} tools` : srv.status === 'error' ? 'error' : 'disconnected';
       items.push({ type: 'mcp', id: srv.id || srv.name, name: srv.name || 'MCP Server', detail: statusText, enabled: srv.is_enabled !== false, data: srv });
+    }
+    // Telegram remote control bot
+    const cfg = (remoteRes.providers || {}).telegram;
+    if (cfg && (cfg.configured || cfg.enabled)) {
+      const status = cfg.status || {};
+      const detailBits = [];
+      detailBits.push(status.running ? 'running' : cfg.enabled ? 'not running' : 'disabled');
+      if (status.last_error) detailBits.push('error');
+      items.push({
+        type: 'remote',
+        id: 'telegram',
+        name: 'Telegram Remote Control',
+        detail: detailBits.join(' - '),
+        enabled: cfg.enabled && !!cfg.configured && !status.last_error,
+        data: cfg,
+      });
     }
     for (const tok of (Array.isArray(tokenRes) ? tokenRes : [])) {
       const scopes = tok.scopes || [];
@@ -3336,6 +3354,7 @@ async function initUnifiedIntegrations() {
           else if (type === 'email') await fetch(`/api/email/accounts/${id}`, { method: 'DELETE', credentials: 'same-origin' });
           else if (type === 'mcp') await fetch(`/api/mcp/servers/${id}`, { method: 'DELETE', credentials: 'same-origin' });
           else if (type === 'codex' || type === 'claude') await fetch(`/api/tokens/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+          else if (type === 'remote') await fetch(`/api/remote-control/${id}`, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reset: true }) });
           else if (type === 'vault') await fetch('/api/vault/logout', { method: 'POST', credentials: 'same-origin' });
         } catch (_) {}
         formEl.style.display = 'none';
@@ -3354,6 +3373,7 @@ async function initUnifiedIntegrations() {
     else if (type === 'mcp') showMcpForm(editId);
     else if (type === 'codex') showAgentForm('codex', editId);
     else if (type === 'claude') showAgentForm('claude', editId);
+    else if (type === 'remote') showRemoteForm();
     else if (type === 'vault') showVaultForm();
   }
 
@@ -4319,6 +4339,134 @@ async function initUnifiedIntegrations() {
     });
   }
 
+  // ── Telegram remote control bot ──
+  async function showRemoteForm() {
+    let remote = { providers: {} };
+    try {
+      const r = await fetch('/api/remote-control', { credentials: 'same-origin' });
+      if (r.ok) remote = await r.json();
+    } catch (_) {}
+    const provider = 'telegram';
+    const cfg = (remote.providers || {}).telegram || {};
+    const status = cfg.status || {};
+    const hasSavedToken = !!cfg.configured || !!cfg.token_mask;
+    const enabledChecked = hasSavedToken ? !!cfg.enabled : true;
+    const tokenPlaceholder = cfg.configured ? `Saved token (${cfg.token_mask || 'configured'})` : 'Paste bot token';
+    const allowHint = 'Send /id to the bot, then add the Telegram chat ID here.';
+    const needsTelegramIds = !(cfg.allowed_chat_ids || []).length;
+    const setupGuide = `
+          <details class="remote-setup-details" ${needsTelegramIds ? 'open' : ''}>
+            <summary>Telegram setup guide</summary>
+            <ol>
+              <li>Create a bot with <code>@BotFather</code>, paste the bot token here, leave Enabled on, then Save.</li>
+              <li>In Telegram, message the bot with <code>/id</code>. If it replies "not allowed yet", that is expected.</li>
+              <li>Copy the <strong>Chat ID</strong> from the bot reply into Chat IDs above, then Save again.</li>
+              <li>After that, messages use the same routing as Odysseus chat: normal questions stay chat, calendar/notes/email actions can use tools. Use <code>/agent your request</code> to force an agent turn.</li>
+            </ol>
+            <div class="remote-setup-example">Example reply: Chat ID: 8666203886</div>
+          </details>`;
+    const statusBits = [];
+    statusBits.push(cfg.configured ? 'token saved' : 'no token');
+    statusBits.push(enabledChecked ? (cfg.enabled ? 'enabled' : 'enabled after save') : 'disabled');
+    statusBits.push(status.running ? 'running' : 'not running');
+    if (status.identity) statusBits.push(`bot ${status.identity}`);
+    if (status.last_error) statusBits.push(`error: ${status.last_error}`);
+    const statusText = statusBits.join(' - ');
+    const telegramRows = `
+          <div class="settings-row" style="align-items:flex-start"><label class="settings-label">Chat IDs</label><textarea id="uf-remote-telegram-chats" class="settings-input" rows="3" placeholder="-1001234567890" style="min-height:58px;resize:vertical">${esc((cfg.allowed_chat_ids || []).join('\n'))}</textarea></div>`;
+
+    formEl.innerHTML = `
+      <div class="admin-card" style="margin-top:8px">
+        <h2 style="font-size:13px">Telegram Remote Control</h2>
+        <div id="uf-remote-status" style="font-size:11px;opacity:0.7;margin-bottom:8px">${esc(statusText)}</div>
+        <div class="settings-col">
+          <div class="settings-row"><label class="settings-label">Enabled</label><label class="admin-switch" style="margin-left:0"><input type="checkbox" id="uf-remote-enabled" ${enabledChecked ? 'checked' : ''}><span class="admin-slider"></span></label></div>
+          <div class="settings-row"><label class="settings-label">Bot token</label><input id="uf-remote-token" class="settings-input" type="password" placeholder="${esc(tokenPlaceholder)}"></div>
+          <div class="settings-row"><label class="settings-label">Allow anyone</label><label class="admin-switch" style="margin-left:0"><input type="checkbox" id="uf-remote-allow-all" ${cfg.allow_all ? 'checked' : ''}><span class="admin-slider"></span></label><span style="font-size:10px;opacity:0.55;margin-left:6px">Off uses the Chat IDs below</span></div>
+          ${telegramRows}
+          <div style="font-size:10px;opacity:0.56;line-height:1.4;margin-left:106px">${esc(allowHint)}</div>
+          ${setupGuide}
+          <div class="settings-row" style="margin-top:4px;flex-wrap:wrap;gap:4px">
+            <button class="admin-btn-sm" id="uf-remote-save">Save</button>
+            <button class="admin-btn-sm" id="uf-remote-test" style="opacity:0.7">Test</button>
+            <button class="admin-btn-sm" id="uf-remote-reload" style="opacity:0.7">Reload</button>
+            <button class="admin-btn-sm" id="uf-remote-cancel" style="opacity:0.7">Cancel</button>
+            <span id="uf-remote-msg" style="font-size:11px;margin-left:4px"></span>
+          </div>
+        </div>
+      </div>`;
+
+    const msg = (text, color) => {
+      const m = el('uf-remote-msg');
+      if (!m) return;
+      m.textContent = text || '';
+      m.style.color = color || '';
+    };
+    const collect = () => {
+      const body = {
+        enabled: !!el('uf-remote-enabled')?.checked,
+        token: (el('uf-remote-token')?.value || '').trim(),
+        allow_all: !!el('uf-remote-allow-all')?.checked,
+        allowed_chat_ids: el('uf-remote-telegram-chats')?.value || '',
+      };
+      return body;
+    };
+
+    el('uf-remote-cancel')?.addEventListener('click', () => { formEl.style.display = 'none'; });
+    el('uf-remote-save')?.addEventListener('click', async () => {
+      msg('Saving...');
+      try {
+        const r = await fetch(`/api/remote-control/${provider}`, {
+          method: 'PUT', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(collect()),
+        });
+        const d = await r.json();
+        if (r.ok && d.providers) {
+          msg('Saved', 'var(--green,#50fa7b)');
+          await renderList();
+          await showRemoteForm();
+          notifyIntegrationsChanged();
+        } else {
+          msg(d.detail || d.error || 'Failed', 'var(--red)');
+        }
+      } catch (e) {
+        msg('Error: ' + e.message, 'var(--red)');
+      }
+    });
+    el('uf-remote-test')?.addEventListener('click', async () => {
+      msg('Testing...');
+      try {
+        const r = await fetch(`/api/remote-control/${provider}/test`, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: (el('uf-remote-token')?.value || '').trim() }),
+        });
+        const d = await r.json();
+        if (d.ok) msg(`Connected as ${d.identity || 'bot'}`, 'var(--green,#50fa7b)');
+        else msg(d.error || 'Failed', 'var(--red)');
+      } catch (e) {
+        msg('Error: ' + e.message, 'var(--red)');
+      }
+    });
+    el('uf-remote-reload')?.addEventListener('click', async () => {
+      msg('Reloading...');
+      try {
+        const r = await fetch(`/api/remote-control/${provider}/reload`, { method: 'POST', credentials: 'same-origin' });
+        const d = await r.json();
+        if (r.ok && d.providers) {
+          msg('Reloaded', 'var(--green,#50fa7b)');
+          await renderList();
+          await showRemoteForm();
+        } else {
+          msg(d.detail || d.error || 'Failed', 'var(--red)');
+        }
+      } catch (e) {
+        msg('Error: ' + e.message, 'var(--red)');
+      }
+    });
+  }
+
   // ── Vaultwarden form ──
   async function showVaultForm() {
     formEl.innerHTML = `
@@ -4973,6 +5121,7 @@ async function initUnifiedIntegrations() {
         ['contacts', 'Contacts Import'],
         ['email', 'Email (IMAP/SMTP)'],
         ['mcp', 'MCP Tool Server'],
+        ['remote', 'Telegram Remote Control'],
       ];
       const _iconFor = (k) => (INTG_TYPES[k]?.icon || '').replace(/width="14"/, 'width="16"').replace(/height="14"/, 'height="16"');
       const _rowsHtml = _typeOptions.map(([k, label]) => `<button type="button" class="uf-type-option" data-value="${k}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:transparent;border:0;color:var(--fg);font:inherit;cursor:pointer;text-align:left;"><span style="display:inline-flex;color:var(--accent, var(--red));flex-shrink:0;">${_iconFor(k)}</span><span>${esc(label)}</span></button>`).join('');

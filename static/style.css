@@ -22345,6 +22345,45 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   outline: none;
   border-color: var(--red);
 }
+.remote-setup-details {
+  margin: 4px 0 2px 106px;
+  border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
+}
+.remote-setup-details[open] {
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+.remote-setup-details > summary {
+  padding: 6px 8px;
+  background: transparent;
+  border-bottom: 0;
+  color: color-mix(in srgb, var(--fg) 72%, transparent);
+  font-size: 11px;
+  font-weight: 500;
+}
+.remote-setup-details[open] > summary {
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.remote-setup-details > ol {
+  margin: 0;
+  padding: 8px 10px 8px 26px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--fg) 68%, transparent);
+}
+.remote-setup-details > ol li {
+  margin: 0 0 5px;
+}
+.remote-setup-details code {
+  font-size: 10px;
+  color: color-mix(in srgb, var(--fg) 82%, transparent);
+}
+.remote-setup-example {
+  padding: 0 10px 8px 26px;
+  font-size: 10px;
+  color: color-mix(in srgb, var(--fg) 52%, transparent);
+}
 /* ── Contacts manager (Settings → Integrations → CardDAV) ── */
 .contacts-add-row {
   display: flex;
