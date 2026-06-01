@@ -9,6 +9,12 @@ def test_calendar_imperative_variants_promote_to_agent():
     assert message_needs_tools("add lunch with Sam to my calendar tomorrow at noon")
     assert message_needs_tools("schedule a call with Mina next Friday")
     assert message_needs_tools("put dentist appointment on my calendar")
+    assert message_needs_tools("Alright. Recreate that same appointment")
+    assert message_needs_tools("Okay delete that doctor appointment from the calendar")
+    assert message_needs_tools("have another go at adding a test entry to the calendar")
+    assert message_needs_tools(
+        "make it an appointment at 12pm for me to visit the doctor it's tomorrow the 2nd of June 2026"
+    )
 
 
 def test_note_todo_and_reminder_actions_promote_to_agent():

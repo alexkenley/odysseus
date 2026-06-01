@@ -512,6 +512,9 @@ import createResearchSynapse from './researchSynapse.js';
     let timedOut = false;
     let processingProbeTimer = null;
     let processingProbeAbort = null;
+    let timeoutId = null;
+    let responseTimeoutCleared = false;
+    let clearResponseTimeout = () => {};
     const clearProcessingProbe = () => {
       if (processingProbeTimer) {
         clearTimeout(processingProbeTimer);
@@ -772,13 +775,26 @@ import createResearchSynapse from './researchSynapse.js';
 
       // Timeout: 6 min for research and agent mode, 3 min otherwise
       const timeoutMs = el('research-toggle').checked || _isAgent ? RESEARCH_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (!abortCtrl.signal.aborted) {
           timedOut = true;
           abortCtrl._reason = 'timeout';
+          try {
+            if (streamSessionId) {
+              fetch(`/api/chat/stop/${encodeURIComponent(streamSessionId)}`, {
+                method: 'POST',
+                credentials: 'same-origin',
+              }).catch(() => {});
+            }
+          } catch (_) {}
           abortCtrl.abort();
         }
       }, timeoutMs);
+      clearResponseTimeout = () => {
+        if (responseTimeoutCleared) return;
+        responseTimeoutCleared = true;
+        clearTimeout(timeoutId);
+      };
       
       const box = el('chat-history');
       holder = document.createElement('div');
@@ -904,16 +920,19 @@ import createResearchSynapse from './researchSynapse.js';
       // the agent so natural-language times like "today at 9pm" are
       // interpreted in YOUR timezone, not the server's.
       const _tzOffsetMin = -new Date().getTimezoneOffset();
+      const _tzName = (() => {
+        try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }
+        catch { return ''; }
+      })();
       const res = await fetch(`${API_BASE}/api/chat_stream`, {
         method: 'POST',
         body: fd,
-        headers: { 'X-Tz-Offset': String(_tzOffsetMin) },
+        headers: { 'X-Tz-Offset': String(_tzOffsetMin), 'X-Tz-Name': _tzName },
         signal: abortCtrl.signal
       });
       
-      clearTimeout(timeoutId);
-      
       if (!res.ok) {
+        clearResponseTimeout();
         if (res.status === 404) {
           // Session was deleted (e.g. by AI) — reload and go to welcome
           holder.remove();
@@ -1334,7 +1353,8 @@ import createResearchSynapse from './researchSynapse.js';
                 typewriterInto(roundHolder.querySelector('.body'), errMsg);
                 break;
               }
-              if (json.delta || json.type === 'tool_start' || json.type === 'agent_step' || json.type === 'doc_stream_delta') {
+              if (json.delta || json.type === 'tool_start' || json.type === 'tool_output' || json.type === 'tool_progress' || json.type === 'agent_step' || json.type === 'doc_stream_open' || json.type === 'doc_stream_delta' || json.type === 'research_progress') {
+                clearResponseTimeout();
                 clearProcessingProbe();
               }
               if (json.delta) {
@@ -2658,6 +2678,7 @@ import createResearchSynapse from './researchSynapse.js';
         }
       }
     } finally {
+      clearResponseTimeout();
       clearProcessingProbe();
       // Always clean up research tracking regardless of background state
       _researchingStreamIds.delete(streamSessionId);
