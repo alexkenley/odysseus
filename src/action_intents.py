@@ -8,7 +8,17 @@ user asks how a feature works.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Iterable, Pattern
+
+
+@dataclass(frozen=True)
+class ToolIntent:
+    """A cheap, deterministic chat-to-agent routing decision."""
+
+    needs_tools: bool
+    category: str = ""
+    reason: str = ""
 
 
 _ACTION_QUESTION = r"\b(?:can|could|would|will)\s+you\s+"
@@ -35,54 +45,71 @@ _PANEL = (
     r"settings|cookbook|sessions?|chats?|skills|memories|memory|brain)"
 )
 
-_TOOL_INTENT_PATTERNS: tuple[Pattern[str], ...] = tuple(
-    re.compile(pattern, re.I)
-    for pattern in (
+_ROUTING_PATTERNS: tuple[tuple[str, str, Pattern[str]], ...] = tuple(
+    (category, reason, re.compile(pattern, re.I))
+    for category, reason, pattern in (
         # Calendar/event creation. Covers "Can you add an entry to my
-        # calendar?" and imperatives like "add lunch to my calendar".
-        rf"{_ACTION_QUESTION}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
-        rf"{_ACTION_FOLLOWUP}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
-        rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b",
-        rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b",
-        rf"{_PLEASE}{_CALENDAR_ACTION}\s+(?:it\s+)?(?:a\s+|an\s+)?(?:calendar\s+)?(?:event|meeting|appointment|entry|item|call)\b",
-        rf"\b{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b",
-        r"\bput\s+.+\bon\s+(?:my\s+)?calendar\b",
+        # calendar?", imperatives like "add lunch to my calendar", and
+        # follow-ups such as "you should be able to create that event now".
+        ("calendar", "assistant calendar action request", rf"{_ACTION_QUESTION}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b"),
+        ("calendar", "calendar follow-up action request", rf"{_ACTION_FOLLOWUP}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b"),
+        ("calendar", "calendar imperative action request", rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b{_CALENDAR_THING}\b"),
+        ("calendar", "calendar target action request", rf"{_PLEASE}{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b"),
+        ("calendar", "calendar item action request", rf"{_PLEASE}{_CALENDAR_ACTION}\s+(?:it\s+)?(?:a\s+|an\s+)?(?:calendar\s+)?(?:event|meeting|appointment|entry|item|call)\b"),
+        ("calendar", "calendar target action request", rf"\b{_CALENDAR_ACTION}\b.{{0,120}}\b(?:to|on|in|into|for)\s+(?:my\s+|the\s+|this\s+)?calendar\b"),
+        ("calendar", "put item on calendar request", r"\bput\s+.+\bon\s+(?:my\s+)?calendar\b"),
 
         # Notes, todos, checklists, and reminders.
-        r"\bremind\s+me\b",
-        rf"{_ACTION_QUESTION}(?:add|create|make|take|jot|write\s+down|set)\b.{{0,120}}\b(?:note|todo|task|checklist|reminder)\b",
-        rf"{_PLEASE}(?:add|create|make)\s+(?:a\s+|an\s+)?(?:todo|task|reminder|note|checklist)\b",
-        rf"{_PLEASE}(?:take|jot|write\s+down)\s+(?:a\s+|an\s+)?note\b",
-        rf"{_PLEASE}(?:add|jot|write\s+down)\b.{{0,120}}\b(?:to|in|into)\s+(?:my\s+|the\s+)?(?:todo(?:\s+list)?|task\s+list|notes?|checklist)\b",
-        rf"{_PLEASE}set\s+(?:a\s+)?reminder\b",
-        rf"{_ACTION_QUESTION}set\s+(?:a\s+)?reminder\b",
+        ("notes", "reminder request", r"\bremind\s+me\b"),
+        ("notes", "assistant note/todo action request", rf"{_ACTION_QUESTION}(?:add|create|make|take|jot|write\s+down|set)\b.{{0,120}}\b(?:note|todo|task|checklist|reminder)\b"),
+        ("notes", "note/todo imperative request", rf"{_PLEASE}(?:add|create|make)\s+(?:a\s+|an\s+)?(?:todo|task|reminder|note|checklist)\b"),
+        ("notes", "take note request", rf"{_PLEASE}(?:take|jot|write\s+down)\s+(?:a\s+|an\s+)?note\b"),
+        ("notes", "add item to notes/todo request", rf"{_PLEASE}(?:add|jot|write\s+down)\b.{{0,120}}\b(?:to|in|into)\s+(?:my\s+|the\s+)?(?:todo(?:\s+list)?|task\s+list|notes?|checklist)\b"),
+        ("notes", "set reminder request", rf"{_PLEASE}set\s+(?:a\s+)?reminder\b"),
+        ("notes", "assistant reminder request", rf"{_ACTION_QUESTION}set\s+(?:a\s+)?reminder\b"),
 
         # Email actions.
-        rf"{_ACTION_QUESTION}(?:send|write|reply|email|message|archive|delete|mark)\b.{{0,120}}\b(?:emails?|mail|messages?|inbox|unread|read)\b",
-        rf"{_PLEASE}(?:send|write|reply)\b.{{0,120}}\b(?:emails?|mail|messages?)\b",
-        rf"{_PLEASE}(?:archive|delete|mark)\b.{{0,120}}\b(?:emails?|mail|messages?|inbox)\b",
-        r"\b(?:send|write|reply)\s+(?:an?\s+)?(?:email|message|mail)\b",
-        r"\bemail\s+\w+\b",
-        r"\bcheck\s+(?:my\s+)?(?:email|inbox|mail)\b",
-        r"\bunread\s+(?:email|mail)s?\b",
+        ("email", "assistant email action request", rf"{_ACTION_QUESTION}(?:send|write|reply|email|message|archive|delete|mark)\b.{{0,120}}\b(?:emails?|mail|messages?|inbox|unread|read)\b"),
+        ("email", "send/write/reply email request", rf"{_PLEASE}(?:send|write|reply)\b.{{0,120}}\b(?:emails?|mail|messages?)\b"),
+        ("email", "archive/delete/mark email request", rf"{_PLEASE}(?:archive|delete|mark)\b.{{0,120}}\b(?:emails?|mail|messages?|inbox)\b"),
+        ("email", "email composition request", r"\b(?:send|write|reply)\s+(?:an?\s+)?(?:email|message|mail)\b"),
+        ("email", "email contact request", r"\bemail\s+\w+\b"),
+        ("email", "check inbox request", r"\bcheck\s+(?:my\s+)?(?:email|inbox|mail)\b"),
+        ("email", "unread email request", r"\bunread\s+(?:email|mail)s?\b"),
 
         # UI/control-plane actions that should open panels or flip toggles.
-        rf"{_PLEASE}(?:open|show|bring\s+up)\s+(?:me\s+)?(?:my\s+|the\s+)?{_PANEL}\b",
-        r"\b(?:disable|enable|turn\s+(?:on|off))\s+(?:the\s+)?(?:shell|search|web|browser|documents?|memory|skills|images?|calendar|email|mail|research|incognito)\b",
+        ("ui", "open/show panel request", rf"{_PLEASE}(?:open|show|bring\s+up)\s+(?:me\s+)?(?:my\s+|the\s+)?{_PANEL}\b"),
+        ("ui", "tool or feature toggle request", r"\b(?:disable|enable|turn\s+(?:on|off))\s+(?:the\s+)?(?:shell|search|web|browser|documents?|memory|skills|images?|calendar|email|mail|research|incognito)\b"),
 
         # Deep research jobs, not quick conceptual mentions of research.
-        rf"{_PLEASE}(?:research|deep\s+dive|look\s+into|investigate)\s+.+",
-        rf"{_ACTION_QUESTION}(?:research|do\s+research|deep\s+dive|look\s+into|investigate)\s+.+",
+        ("research", "deep research imperative request", rf"{_PLEASE}(?:research|deep\s+dive|look\s+into|investigate)\s+.+"),
+        ("research", "assistant deep research request", rf"{_ACTION_QUESTION}(?:research|do\s+research|deep\s+dive|look\s+into|investigate)\s+.+"),
 
         # Shell / remote-host intent.
-        r"\bssh\s+(?:in)?to\b",
-        r"\bssh\s+\w+",
-        r"\b(run|execute)\s+.{1,40}\bon\s+\w+",
-        r"\b(can|could|please|would)\s+you\s+(run|execute|exec)\b",
-        r"\b(deploy|build|install|restart|reboot|kill|tail|grep|cat|ls|cd|cp|mv|rm)\b\s+\S+",
-        r"\b(check|see)\s+(if|whether|what)\s+.{1,40}\b(running|process|service|port|file|exists?)\b",
+        ("shell", "ssh request", r"\bssh\s+(?:in)?to\b"),
+        ("shell", "ssh target request", r"\bssh\s+\w+"),
+        ("shell", "remote command request", r"\b(run|execute)\s+.{1,40}\bon\s+\w+"),
+        ("shell", "assistant command execution request", r"\b(can|could|please|would)\s+you\s+(run|execute|exec)\b"),
+        ("shell", "shell command request", r"\b(deploy|build|install|restart|reboot|kill|tail|grep|cat|ls|cd|cp|mv|rm)\b\s+\S+"),
+        ("shell", "system/file check request", r"\b(check|see)\s+(if|whether|what)\s+.{1,40}\b(running|process|service|port|file|exists?)\b"),
     )
 )
+
+_TOOL_INTENT_PATTERNS: tuple[Pattern[str], ...] = tuple(
+    pattern for _, _, pattern in _ROUTING_PATTERNS
+)
+
+
+def classify_tool_intent(text: str) -> ToolIntent:
+    """Classify whether a chat message should be promoted to agent mode."""
+    if not text:
+        return ToolIntent(False, reason="empty message")
+    if _EXPLANATORY_PREFIX.search(text):
+        return ToolIntent(False, reason="explanatory feature question")
+    for category, reason, pattern in _ROUTING_PATTERNS:
+        if pattern.search(text):
+            return ToolIntent(True, category=category, reason=reason)
+    return ToolIntent(False, reason="no tool-action pattern matched")
 
 
 def message_needs_tools(text: str, patterns: Iterable[Pattern[str]] = _TOOL_INTENT_PATTERNS) -> bool:
@@ -91,4 +118,6 @@ def message_needs_tools(text: str, patterns: Iterable[Pattern[str]] = _TOOL_INTE
         return False
     if _EXPLANATORY_PREFIX.search(text):
         return False
+    if patterns is _TOOL_INTENT_PATTERNS:
+        return classify_tool_intent(text).needs_tools
     return any(pattern.search(text) for pattern in patterns)

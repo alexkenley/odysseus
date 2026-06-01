@@ -35,7 +35,7 @@ from routes.chat_helpers import (
     clean_thinking_for_save,
     _enforce_chat_privileges,
 )
-from src.action_intents import message_needs_tools as _message_needs_tools
+from src.action_intents import classify_tool_intent as _classify_tool_intent
 
 logger = logging.getLogger(__name__)
 
@@ -262,10 +262,15 @@ def setup_chat_routes(
         # its way through a plain chat request (and fail, especially with the
         # shell disabled).
         auto_escalated = False
-        if chat_mode == "chat" and isinstance(message, str) and _message_needs_tools(message):
+        _tool_intent = _classify_tool_intent(message) if isinstance(message, str) else None
+        if chat_mode == "chat" and _tool_intent and _tool_intent.needs_tools:
             chat_mode = "agent"
             auto_escalated = True
-            logger.info("chat→agent auto-escalation: message matched tool-intent pattern")
+            logger.info(
+                "chat→agent auto-escalation: category=%s reason=%s",
+                _tool_intent.category,
+                _tool_intent.reason,
+            )
         active_doc_id = form_data.get("active_doc_id", "").strip()
         logger.info(f"[doc-inject] chat_mode={chat_mode}, active_doc_id={active_doc_id!r}")
 
